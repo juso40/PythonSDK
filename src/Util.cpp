@@ -254,4 +254,28 @@ namespace Util
 	exit:
 		return success ? WAIT_OBJECT_0 : WAIT_TIMEOUT;
 	}
+
+	std::string ProcessIdToName(DWORD processId) {
+		std::string ret;
+		HANDLE handle = OpenProcess(
+			PROCESS_QUERY_LIMITED_INFORMATION,
+			FALSE,
+			processId /* This is the PID, you can find one from windows task manager */
+		);
+		if (handle) {
+			DWORD buffSize = 1024;
+			CHAR buffer[1024];
+			if (QueryFullProcessImageNameA(handle, 0, buffer, &buffSize)) {
+				ret = buffer;
+			}
+			else {
+				printf("Error GetModuleBaseNameA : %lu", GetLastError());
+			}
+			CloseHandle(handle);
+		}
+		else {
+			printf("Error OpenProcess : %lu", GetLastError());
+		}
+		return ret;
+	}
 }

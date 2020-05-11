@@ -95,7 +95,9 @@ PYBIND11_EMBEDDED_MODULE(unrealsdk, m)
 	      py::return_value_policy::reference);
 	m.def("LoadObject", [](UClass* Class, char* ObjectFullName) { return UObject::Load(Class, ObjectFullName); },
 	      py::return_value_policy::reference);
+	
 	//m.def("LoadTexture", &UnrealSDK::LoadTexture, py::return_value_policy::reference);
+	
 	m.def("SetLoggingLevel", &Logging::SetLoggingLevel);
 	m.def("ConstructObject", &UnrealSDK::ConstructObject, "Construct Objects", py::arg("Class"),
 	      py::arg("Outer") = UnrealSDK::GetEngine()->Outer, py::arg("Name") = FName(), py::arg("SetFlags") = 0x1,
@@ -189,7 +191,7 @@ void CPythonInterface::InitializeState()
 {
 	try
 	{
-		py::initialize_interpreter();
+		py::initialize_interpreter();  // Crashes, try catch doesent help, no Log only crash
 		py::module::import("unrealsdk");
 		m_mainNamespace = py::module::import("__main__");
 	}

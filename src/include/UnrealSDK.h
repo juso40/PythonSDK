@@ -75,7 +75,7 @@ namespace UnrealSDK
 	                         unsigned int InternalSetFlags, UObject* InTemplate, FOutputDevice* Error,
 	                         void* InstanceGraph, int AssumeTemplateIsArchetype);
 	UObject* GetEngine();
-	//UObject			*LoadTexture(char *Filename, char *TextureName);
+	UObject* LoadTexture(char *Filename, char *TextureName);
 
 	void RegisterHook(const std::string& FuncName, const std::string& HookName,
 	                  const std::function<bool(UObject*, UFunction*, FStruct*)>& FuncHook);

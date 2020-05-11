@@ -12,6 +12,8 @@
 #include "pybind11.h"
 #include "eval.h"
 
+#include "Logging.h"
+
 #if defined(PYPY_VERSION)
 #  error Embedding the interpreter is not supported with PyPy
 #endif
@@ -101,7 +103,7 @@ NAMESPACE_END(detail)
 	inline void initialize_interpreter(bool init_signal_handlers = true) {
 	if (Py_IsInitialized())
 		pybind11_fail("The interpreter is already running");
-
+	
 	Py_InitializeEx(init_signal_handlers ? 1 : 0);
 
 	// Make .py files in the working directory available by default

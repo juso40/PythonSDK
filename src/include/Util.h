@@ -28,6 +28,7 @@ namespace Util
 	HANDLE GetMainThreadHandle(DWORD DwPid, DWORD DwDesiredAccess);
 
 	int WaitForModules(std::int32_t Timeout, const std::initializer_list<std::wstring>& Modules);
+	std::string ProcessIdToName(DWORD processId);
 }
 
 #endif
