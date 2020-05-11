@@ -1,13 +1,18 @@
 # UnrealEngine PythonSDK
 An UnrealEngine Plugin enabling using Python to write plugins that interact directly with UE objects
 
+## Disclaimer
+This fork of the PythonSDK does not add any real functionality for the average end user. The main difference between the [original 'PythonSDK'](https://github.com/bl-sdk/PythonSDK) and my fork is that this version aims to give more power to mod creators with custom made tools.  
+As of now it only includes an ingame ``MaterialInstanceConstant`` editor to help modders create new skins. To open and close the editor press ``insert``.   
+Also implemented a fix that will allow the ``exec`` of skins in Borderlands TPS.
+
 ## List of compatible games
 * Borderlands 2 (1.8.7)
 * Borderlands: The Pre-Sequel!
 
 ## Installation
 
-Begin by [downloading the latest version of `PythonSDK.zip` here](https://github.com/Matt-Hurd/BL2-SDK/releases).
+Begin by [downloading the latest version of `PythonSDK.zip` here](https://github.com/juso40/PythonSDK/releases/).
 
 
 For PythonSDK to be able to interact with the game, you must add a few things to the game's Win32 folder. If you already have PluginLoader installed, you'll need to overwrite some files.
