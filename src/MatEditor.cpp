@@ -220,9 +220,11 @@ namespace MEditor {
 
 			Logging::Log(Util::Format("Got the d3d9Device vTable at: 0x%x", d3d9Device).c_str());
 			onEndScene = (f_EndScene)TrampHook32((char*)d3d9Device[42], (char*)Hooked_EndScene, 7);  // 42 = EndScene
-
+			return;
 		}
-
+		Logging::Log("Did not find any d3d9Device vTable! Will try again in 50ms.");
+		Sleep(50);
+		Initialize();
 	}
 
 	void RefreshMatInstConsts() {
@@ -430,9 +432,6 @@ namespace MEditor {
 
 	HRESULT __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) // Our hooked endscene
 	{
-		if (GetAsyncKeyState(VK_F1) & 0x80) {
-			Logging::Log("Pressed F1");
-		}
 
 		static bool init = true;
 		if (init) {
