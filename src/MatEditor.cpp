@@ -5,6 +5,7 @@
 #include "CHookManager.h"
 #include "Exceptions.h"
 #include "Logging.h"
+#include "detours/detours.h"
 #include "d3d9.h"
 #include "d3dx9.h"
 #pragma comment(lib, "d3d9.lib")
@@ -19,6 +20,10 @@ extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam
 
 typedef HRESULT(__stdcall* f_EndScene)(IDirect3DDevice9* pDevice); // Our function prototype 
 f_EndScene onEndScene; // Original Endscene
+typedef HRESULT(__stdcall* f_Reset)(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters); // Our function prototype 
+f_Reset onReset; // Original Reset
+
+
 
 typedef LRESULT(CALLBACK* WNDPROC)(HWND, UINT, WPARAM, LPARAM);
 WNDPROC oWndProc;
@@ -109,45 +114,6 @@ bool GetD3D9Device(void** pTable, size_t Size) {
 	return true;
 }
 
-bool Detour32(char* src, char* dst, const intptr_t len) {
-	if (len < 5) return false;
-
-	DWORD  curProtection;
-	VirtualProtect(src, len, PAGE_EXECUTE_READWRITE, &curProtection);
-
-	intptr_t  relativeAddress = (intptr_t)(dst - (intptr_t)src) - 5;
-
-	*src = (char)'\xE9';
-	*(intptr_t*)((intptr_t)src + 1) = relativeAddress;
-
-	VirtualProtect(src, len, curProtection, &curProtection);
-	return true;
-}
-
-char* TrampHook32(char* src, char* dst, const intptr_t len) {
-	// Make sure the length is greater than 5
-	if (len < 5) return 0;
-
-	// Create the gateway (len + 5 for the overwritten bytes + the jmp)
-	void* gateway = VirtualAlloc(0, len + 5, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-
-	//Write the stolen bytes into the gateway
-	memcpy(gateway, src, len);
-
-	// Get the gateway to destination addy
-	intptr_t  gatewayRelativeAddr = ((intptr_t)src - (intptr_t)gateway) - 5;
-
-	// Add the jmp opcode to the end of the gateway
-	*(char*)((intptr_t)gateway + len) = 0xE9;
-
-	// Add the address to the jmp
-	*(intptr_t*)((intptr_t)gateway + len + 1) = gatewayRelativeAddr;
-
-	// Perform the detour
-	Detour32(src, dst, len);
-
-	return (char*)gateway;
-}
 
 size_t split(const std::string& txt, std::vector<std::string>& strs, char ch) {
 	size_t pos = txt.find(ch);
@@ -207,6 +173,7 @@ namespace MEditor {
 	std::unordered_map<const char*, float> mScalarParametersSelected;
 
 	FLinearColor fCol;
+	bool imguiInit = true;
 
 
 
@@ -219,7 +186,19 @@ namespace MEditor {
 			//hook stuff using the dumped addresses
 
 			Logging::Log(Util::Format("Got the d3d9Device vTable at: 0x%x", d3d9Device).c_str());
-			onEndScene = (f_EndScene)TrampHook32((char*)d3d9Device[42], (char*)Hooked_EndScene, 7);  // 42 = EndScene
+			onEndScene = reinterpret_cast<f_EndScene>(d3d9Device[42]);
+			DetourTransactionBegin();
+			DetourUpdateThread(GetCurrentThread());
+			DetourAttach(reinterpret_cast<PVOID*>(&onEndScene), Hooked_EndScene);
+			DetourTransactionCommit();
+
+
+			onReset = reinterpret_cast<f_Reset>(d3d9Device[16]);
+			DetourTransactionBegin();
+			DetourUpdateThread(GetCurrentThread());
+			DetourAttach(reinterpret_cast<PVOID*>(&onReset), Hooked_Reset);
+			DetourTransactionCommit();
+
 			return;
 		}
 		Logging::Log("Did not find any d3d9Device vTable! Will try again in 50ms.");
@@ -433,13 +412,12 @@ namespace MEditor {
 	HRESULT __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) // Our hooked endscene
 	{
 
-		static bool init = true;
-		if (init) {
+		if (imguiInit) {
 			// onReset reinit ImGui???
 			// maybe reason for crash on resize???
-			init = false;
+			imguiInit = false;
 			ImGui::CreateContext();
-			ImGuiIO& io = ImGui::GetIO();
+			//ImGuiIO& io = ImGui::GetIO();
 			ImGui_ImplWin32_Init(GetProcessWindow());
 			ImGui_ImplDX9_Init(pDevice);
 			ImGui::SetNextWindowSize(ImVec2(640, 440), ImGuiCond_FirstUseEver);
@@ -591,7 +569,22 @@ namespace MEditor {
 			ImGui::Render();
 			ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 		}
+
+		
 		return onEndScene(pDevice); // Call original ensdcene so the game can draw
+	}
+
+	HRESULT __stdcall Hooked_Reset(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters) {
+		if (imguiInit)
+			return onReset(pDevice, pPresentationParameters);
+
+
+		ImGui_ImplDX9_InvalidateDeviceObjects();
+		ImGui::DestroyContext();
+		HRESULT hr = onReset(pDevice, pPresentationParameters);
+		ImGui::CreateContext();
+		ImGui_ImplDX9_CreateDeviceObjects();
+		return hr;
 	}
 
 	void HookInits() {

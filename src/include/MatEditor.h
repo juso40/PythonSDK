@@ -23,6 +23,7 @@ namespace MEditor {
 	bool TPSSkinFix(UObject* Caller, UFunction* Func, FStruct* params);
 	void HookInits();
 	HRESULT __stdcall  Hooked_EndScene(IDirect3DDevice9* pDevice);
+	HRESULT __stdcall  Hooked_Reset(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
 
 	extern CHookManager* MatHookManager;
 	extern char cFilterMats[64];
